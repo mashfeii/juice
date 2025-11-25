@@ -1,0 +1,44 @@
+name: Trivy Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "template"
+          template: "@/contrib/html.tpl"
+          output: "trivy-report.html"
+          exit-code: 0
+
+      - name: Upload Trivy report
+        uses: actions/upload-artifact@v3
+        with:
+          name: trivy-security-report
+          path: trivy-report.html
+
+      - name: Generate SBOM
+        run: |
+          trivy fs . --format cyclonedx --output sbom.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v3
+        with:
+          name: software-bill-of-materials
+          path: sbom.json
